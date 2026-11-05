@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Texas Hold'em Poker</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Hold'em">
+  <meta name="theme-color" content="#0d2b22">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <span id="hand-no"></span>
+      <span id="blinds"></span>
+      <button id="open-settings" type="button" aria-label="설정">설정</button>
+    </header>
+
+    <main id="table">
+      <div class="felt"></div>
+      <div id="seats"></div>
+      <div id="center">
+        <div id="pot"></div>
+        <div id="board"></div>
+        <div id="status"></div>
+      </div>
+    </main>
+
+    <section id="hero">
+      <div id="hero-info"></div>
+      <div id="hero-cards"></div>
+      <div id="hero-hand"></div>
+    </section>
+
+    <section id="actions"></section>
+  </div>
+
+  <div id="modal" hidden>
+    <div id="modal-box"></div>
+  </div>
+
+  <script type="module" src="js/ui.js"></script>
+</body>
+</html>

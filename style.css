@@ -1,0 +1,528 @@
+:root {
+  --bg: #0d2b22;
+  --felt: #17694f;
+  --felt-edge: #0b4a36;
+  --panel: rgba(6, 22, 17, 0.82);
+  --text: #f2f5f3;
+  --muted: #a7bdb4;
+  --gold: #f2c14e;
+  --red: #d33a3a;
+  --card-w: 46px;
+  --card-h: 66px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+body {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#topbar {
+  flex: none;
+  height: 38px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+#open-settings {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Table */
+#table {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 6px;
+}
+
+.felt {
+  position: absolute;
+  top: 34px;
+  right: 18px;
+  bottom: 10px;
+  left: 18px;
+  border-radius: 120px;
+  background: radial-gradient(ellipse at center, #1f8263 0%, var(--felt) 60%, var(--felt-edge) 100%);
+  border: 6px solid #3b2a1b;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.45);
+}
+
+#center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+#pot {
+  min-height: 22px;
+  padding: 2px 12px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#pot:empty {
+  visibility: hidden;
+}
+
+#board {
+  display: flex;
+  gap: 4px;
+  min-height: var(--card-h);
+}
+
+#status {
+  min-height: 34px;
+  max-width: 82%;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Cards */
+.card {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  flex: none;
+  border-radius: 6px;
+  background: #fbfbf8;
+  color: #1a1a1a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.card.red {
+  color: var(--red);
+}
+
+.card .r {
+  font-size: 23px;
+}
+
+.card .s {
+  font-size: 22px;
+  margin-top: 3px;
+}
+
+.card.back {
+  background: repeating-linear-gradient(45deg, #2c4f9e 0 4px, #24417f 4px 8px);
+  border: 2px solid #fbfbf8;
+}
+
+.card.new {
+  animation: deal 0.25s ease-out;
+}
+
+.card.win {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 10px var(--gold);
+}
+
+.card.dim {
+  filter: brightness(0.6);
+}
+
+@keyframes deal {
+  from {
+    transform: translateY(-14px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Bot seats */
+.seat {
+  position: absolute;
+  width: 92px;
+  transform: translateX(-50%);
+  padding: 4px 5px 5px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 2px solid transparent;
+  text-align: center;
+  font-size: 12px;
+  transition: opacity 0.2s;
+}
+
+.seat.turn {
+  border-color: var(--gold);
+}
+
+.seat.folded {
+  opacity: 0.45;
+}
+
+.seat.winner {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px var(--gold);
+}
+
+.seat .row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.seat .name {
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.seat .chips {
+  color: var(--gold);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.seat .act {
+  min-height: 15px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.seat .mini {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  min-height: 36px;
+  margin-top: 2px;
+}
+
+.seat .card {
+  width: 27px;
+  height: 36px;
+  border-radius: 4px;
+}
+
+.seat .card .r {
+  font-size: 13px;
+}
+
+.seat .card .s {
+  font-size: 12px;
+  margin-top: 1px;
+}
+
+.seat .card.back {
+  border-width: 1px;
+}
+
+.badge {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  flex: none;
+}
+
+/* Player */
+#hero {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  min-height: 92px;
+}
+
+#hero.turn #hero-cards .card {
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+#hero-info {
+  font-size: 13px;
+}
+
+#hero-info .chips {
+  display: block;
+  color: var(--gold);
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#hero-info .act {
+  display: block;
+  min-height: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#hero-cards {
+  display: flex;
+  gap: 5px;
+  min-height: 80px;
+}
+
+#hero-cards .card {
+  --card-w: 56px;
+  --card-h: 80px;
+}
+
+#hero-cards .card .r {
+  font-size: 28px;
+}
+
+#hero-cards .card .s {
+  font-size: 26px;
+}
+
+#hero-hand {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  text-align: right;
+}
+
+/* Actions */
+#actions {
+  flex: none;
+  min-height: 118px;
+  padding: 4px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 50px;
+  padding: 6px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  background: #2b4a40;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+}
+
+.btn.fold {
+  background: #8c2f2f;
+}
+
+.btn.call {
+  background: #2472b8;
+}
+
+.btn.raise,
+.btn.primary {
+  background: #c98a13;
+  color: #1c1300;
+}
+
+.btn.small {
+  min-height: 36px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+
+.raise-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.raise-line .amount {
+  min-width: 66px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  accent-color: var(--gold);
+}
+
+.waiting {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding-bottom: 14px;
+}
+
+/* Modal */
+#modal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+#modal[hidden] {
+  display: none;
+}
+
+#modal-box {
+  width: 100%;
+  max-width: 360px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 16px;
+  background: #12382c;
+}
+
+#modal-box h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+#modal-box h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+#modal-box p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  font-size: 14px;
+}
+
+.stats b {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.btn.selected {
+  background: var(--gold);
+  color: #1c1300;
+}
+
+#modal-box .btn-row + .btn-row,
+#modal-box .stats + .btn-row {
+  margin-top: 14px;
+}
+
+/* Short screens such as a 4.7-inch iPhone */
+@media (max-height: 690px) {
+  :root {
+    --card-w: 40px;
+    --card-h: 56px;
+  }
+
+  #hero {
+    min-height: 76px;
+    padding: 2px 12px;
+  }
+
+  #hero-cards {
+    min-height: 66px;
+  }
+
+  #hero-cards .card {
+    --card-w: 46px;
+    --card-h: 66px;
+  }
+
+  .seat .mini {
+    min-height: 30px;
+  }
+
+  .seat .card {
+    width: 23px;
+    height: 30px;
+  }
+}
