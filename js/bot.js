@@ -9,6 +9,9 @@ export const BOT_ROSTER = [
   { name: '하린', style: { loose: 0.03, aggression: 0.35, bluff: 0.05 } },
 ];
 
+// Players, the human included, who reach the flop on a table that seats that many.
+const MIN_FLOP_PLAYERS = 5;
+
 /** Monte Carlo share of the pot against random hands. Ties count fractionally. */
 export function estimateEquity(hole, board, opponents, iterations, rng) {
   const known = new Set([...hole, ...board]);
@@ -54,23 +57,31 @@ function raiseAmount(view, fraction) {
 export function decide(view, style, rng = Math.random, iterations = 120) {
   const { legal, pot, chips, opponents } = view;
   const { toCall } = legal;
+  const preflop = view.stage === 'preflop';
   const equity = estimateEquity(view.hole, view.board, opponents, iterations, rng);
 
   const fairShare = 1 / (opponents + 1);
   const strong = fairShare + (1 - fairShare) * 0.45;
-  const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
+  // Equity against a full table starts low, but so does the price: preflop the
+  // pot keeps growing as the field calls, so measure against the pot it becomes.
+  const potOdds = toCall > 0 ? toCall / (pot + toCall * (preflop ? opponents + 1 : 1)) : 0;
   // Equity is measured against random hands, but big bets rarely come from
   // random hands, so demand more the larger the bet and the more raises there are.
   const pressure = Math.min(1, toCall / Math.max(1, chips));
-  const required = potOdds + 0.04 + 0.22 * pressure + 0.04 * view.raises - style.loose;
+  const margin = preflop ? 0 : 0.04;
+  const required = potOdds + margin + 0.22 * pressure + 0.04 * view.raises - style.loose;
+  // The human is counted as staying, so a bot may only fold while four others remain.
+  const mustStay = preflop && view.seated >= MIN_FLOP_PLAYERS && view.botsLeft < MIN_FLOP_PLAYERS;
 
-  if (legal.canRaise && equity > strong && rng() < 0.5 + style.aggression / 2) {
+  // A raise over a raise shows real strength, and without this a full field
+  // keeps raising itself all-in. Bluffs likewise have more hands to get through.
+  if (legal.canRaise && equity > strong + 0.1 * view.raises && rng() < 0.5 + style.aggression / 2) {
     return { type: 'raise', amount: raiseAmount(view, 0.5 + rng() * 0.5) };
   }
-  if (legal.canRaise && pressure < 0.15 && rng() < style.bluff) {
+  if (legal.canRaise && pressure < 0.15 && rng() < style.bluff / opponents) {
     return { type: 'raise', amount: raiseAmount(view, 0.5 + rng() * 0.25) };
   }
   if (legal.canCheck) return { type: 'check' };
-  if (equity >= required) return { type: 'call' };
+  if (equity >= required || mustStay) return { type: 'call' };
   return { type: 'fold' };
 }

@@ -308,6 +308,8 @@ export class Table {
       raises: this.raises,
       bigBlind: this.bigBlind,
       opponents: this._live().length - 1,
+      seated: this.players.filter((p) => p.inHand).length,
+      botsLeft: this._live().filter((p) => !p.isHuman).length,
       legal: this.legal(),
     };
   }

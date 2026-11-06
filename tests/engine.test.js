@@ -313,6 +313,131 @@ for (const botCount of [1, 2, 5, 6]) {
   });
 }
 
+// Plays hands with a scripted human in seat 0 and records who was left at each flop.
+function flopFields(botCount, human, hands = 200) {
+  const rng = mulberry32(40 + botCount);
+  const bots = BOT_ROSTER.slice(0, botCount).map((b) => ({ ...b, isHuman: false, chips: 3000 }));
+  const t = new Table({ players: [{ name: '나', isHuman: true, chips: 3000 }, ...bots], rng });
+  const fields = [];
+  for (let hand = 0; hand < hands; hand++) {
+    for (const p of t.players) if (p.chips === 0) p.chips = 3000;
+    t.startHand();
+    while (t.stage !== 'done') {
+      if (t.toAct === 0) t.act(human(t.legal(), t.stage));
+      else if (t.toAct > 0) t.act(decide(t.viewFor(t.toAct), t.players[t.toAct].style, rng, 8));
+      else {
+        if (t.stage === 'preflop') {
+          const live = t.players.filter((p) => p.inHand && !p.folded);
+          fields.push({ total: live.length, bots: live.filter((p) => !p.isHuman).length });
+        }
+        t.advance();
+      }
+    }
+  }
+  return fields;
+}
+
+const passive = (l) => ({ type: l.canCheck ? 'check' : 'call' });
+const quitter = (l) => ({ type: l.canCheck ? 'check' : 'fold' });
+const shover = (l, stage) => {
+  if (stage !== 'preflop') return quitter(l);
+  return l.canRaise ? { type: 'raise', amount: l.maxRaiseTo } : passive(l);
+};
+
+test('at a full table at least five players see every flop', () => {
+  const fields = flopFields(6, passive);
+  assert.equal(fields.length, 200);
+  assert.ok(fields.every((f) => f.total >= 5), JSON.stringify(fields.find((f) => f.total < 5)));
+  assert.ok(fields.some((f) => f.total > 5), 'the field size should still vary');
+});
+
+test('five players still see the flop when the human shoves every hand', () => {
+  const fields = flopFields(6, shover);
+  assert.equal(fields.length, 200);
+  assert.ok(fields.every((f) => f.total >= 5));
+});
+
+test('four bots stay in even when the human folds', () => {
+  const fields = flopFields(6, quitter);
+  assert.equal(fields.length, 200);
+  assert.ok(fields.every((f) => f.bots >= 4));
+});
+
+test('at a table of exactly five nobody but the human can leave before the flop', () => {
+  const fields = flopFields(4, passive);
+  assert.equal(fields.length, 200);
+  assert.ok(fields.every((f) => f.total === 5));
+});
+
+const SEVEN_DEUCE = [makeCard(7, 0), makeCard(2, 1)];
+const ACES = [makeCard(14, 0), makeCard(14, 1)];
+const STEADY = { loose: 0, aggression: 1, bluff: 0 };
+const facing = (toCall, overrides = {}) => ({
+  hole: SEVEN_DEUCE,
+  board: [],
+  stage: 'preflop',
+  pot: 30,
+  chips: 3000,
+  bet: 0,
+  currentBet: toCall,
+  raises: 0,
+  bigBlind: 20,
+  opponents: 6,
+  seated: 7,
+  botsLeft: 6,
+  legal: { toCall, canCheck: false, canRaise: false, minRaiseTo: 0, maxRaiseTo: 0 },
+  ...overrides,
+});
+
+test('while the field allows it, preflop folds follow the strength of the hand', () => {
+  const rng = mulberry32(5);
+  assert.equal(decide(facing(20), STEADY, rng, 400).type, 'fold');
+  assert.equal(decide(facing(20, { hole: ACES }), STEADY, rng, 400).type, 'call');
+  const middling = [makeCard(11, 0), makeCard(10, 0)];
+  assert.equal(decide(facing(20, { hole: middling }), STEADY, rng, 400).type, 'call');
+});
+
+test('the last four bots call even a huge preflop bet', () => {
+  const view = facing(3000, { pot: 3030, botsLeft: 4, opponents: 4 });
+  assert.equal(decide(view, STEADY, mulberry32(6), 100).type, 'call');
+});
+
+test('the rule ends at the flop', () => {
+  const board = [makeCard(13, 2), makeCard(12, 2), makeCard(9, 3)];
+  const view = facing(500, { pot: 1000, botsLeft: 4, opponents: 4, stage: 'flop', board });
+  assert.equal(decide(view, STEADY, mulberry32(7), 100).type, 'fold');
+});
+
+test('a table too small for five players keeps normal folding', () => {
+  const view = facing(3000, { pot: 3030, seated: 4, botsLeft: 3, opponents: 3 });
+  assert.equal(decide(view, STEADY, mulberry32(8), 100).type, 'fold');
+});
+
+test('bots bluff a full field less than a single opponent', () => {
+  const rng = mulberry32(9);
+  const style = { loose: 0, aggression: 0, bluff: 0.3 };
+  const legal = { toCall: 20, canCheck: false, canRaise: true, minRaiseTo: 40, maxRaiseTo: 3000 };
+  const raises = (opponents) => {
+    let count = 0;
+    for (let i = 0; i < 1000; i++) {
+      if (decide(facing(20, { legal, opponents }), style, rng, 20).type === 'raise') count++;
+    }
+    return count;
+  };
+  const heads = raises(1);
+  const field = raises(6);
+  assert.ok(heads > 240 && heads < 360, `heads-up ${heads}`);
+  assert.ok(field > 25 && field < 85, `full field ${field}`);
+});
+
+test('a raise over a raise needs a stronger hand', () => {
+  const rng = mulberry32(10);
+  const legal = { toCall: 20, canCheck: false, canRaise: true, minRaiseTo: 40, maxRaiseTo: 3000 };
+  const view = { hole: ACES, opponents: 1, seated: 2, botsLeft: 1, legal };
+  assert.equal(decide(facing(20, view), STEADY, rng, 400).type, 'raise');
+  assert.equal(decide(facing(20, { ...view, raises: 2 }), STEADY, rng, 400).type, 'call');
+});
+
 test('random legal play never breaks the engine', () => {
   const rng = mulberry32(55);
   const t = new Table({ players: seats(300, 50, 700, 25, 1000, 120), rng });
