@@ -6,6 +6,7 @@ export const BOT_ROSTER = [
   { name: '현우', style: { loose: 0.08, aggression: 0.25, bluff: 0.02 } },
   { name: '서연', style: { loose: 0, aggression: 0.55, bluff: 0.07 } },
   { name: '도윤', style: { loose: 0.05, aggression: 0.9, bluff: 0.18 } },
+  { name: '하린', style: { loose: 0.03, aggression: 0.35, bluff: 0.05 } },
 ];
 
 /** Monte Carlo share of the pot against random hands. Ties count fractionally. */

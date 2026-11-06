@@ -276,7 +276,7 @@ test('bots do not receive other players hole cards', () => {
   assert.ok(!text.includes('hole":[]'));
 });
 
-for (const botCount of [1, 2, 5]) {
+for (const botCount of [1, 2, 5, 6]) {
   test(`bot simulation keeps chips conserved with ${botCount + 1} players`, () => {
     const rng = mulberry32(100 + botCount);
     const players = seats(...new Array(botCount + 1).fill(1000)).map((p, i) => ({
@@ -369,8 +369,56 @@ test('session survives corrupt saved data', () => {
   const storage = memoryStorage();
   storage.setItem(STORE_KEY, '{not json');
   const s = new Session({ storage });
-  assert.equal(s.table.players.length, 5);
+  assert.equal(s.table.players.length, 7);
   assert.equal(s.human.chips, STARTING_CHIPS);
+});
+
+test('a new game seats seven players with 3,000 chips each', () => {
+  const s = new Session({ storage: memoryStorage() });
+  assert.equal(STARTING_CHIPS, 3000);
+  assert.equal(s.table.players.length, 7);
+  assert.ok(s.table.players.every((p) => p.chips === 3000));
+  const names = s.table.players.map((p) => p.name);
+  assert.equal(new Set(names).size, 7);
+  assert.ok(s.table.players.slice(1).every((p) => p.style));
+});
+
+test('an older save moves to the new table and keeps its record', () => {
+  const storage = memoryStorage();
+  storage.setItem(STORE_KEY, JSON.stringify({
+    settings: { botCount: 4, speed: 'fast' },
+    stats: { hands: 120, wins: 40, biggestPot: 5100, rebuys: 2 },
+    handNumber: 120,
+    dealer: 3,
+    chips: [6400, 900, 1200, 800, 700],
+  }));
+  const s = new Session({ storage });
+  assert.equal(s.table.players.length, 7);
+  assert.ok(s.table.players.every((p) => p.chips === 3000));
+  assert.equal(s.settings.botCount, 6);
+  assert.equal(s.settings.speed, 'fast');
+  assert.deepEqual(s.stats, { hands: 120, wins: 40, biggestPot: 5100, rebuys: 2 });
+  assert.equal(s.handNumber, 120);
+});
+
+test('the upgrade happens once, so later play and bot count choices survive a reload', () => {
+  const storage = memoryStorage();
+  storage.setItem(STORE_KEY, JSON.stringify({
+    settings: { botCount: 4, speed: 'normal' },
+    stats: {},
+    chips: [2000, 2000, 2000, 2000, 2000],
+  }));
+  const a = new Session({ storage, rng: mulberry32(4) });
+  a.startHand();
+  runOut(a.table);
+  a.finishHand();
+  const chips = a.table.players.map((p) => p.chips);
+  assert.deepEqual(new Session({ storage }).table.players.map((p) => p.chips), chips);
+
+  a.newGame(3);
+  const b = new Session({ storage });
+  assert.equal(b.table.players.length, 4);
+  assert.equal(b.settings.botCount, 3);
 });
 
 test('busted bots rebuy and a busted human must rebuy', () => {

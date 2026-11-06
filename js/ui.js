@@ -18,6 +18,7 @@ const SEAT_LAYOUTS = {
   3: [[13, 30], [50, 0], [87, 30]],
   4: [[13, 62], [28, 0], [72, 0], [87, 62]],
   5: [[13, 64], [13, 14], [50, 0], [87, 14], [87, 64]],
+  6: [[12.5, 64], [12.5, 14], [37, 0], [63, 0], [87.5, 14], [87.5, 64]],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -390,7 +391,7 @@ function showSettings() {
       ? '봇 수 (핸드가 끝난 뒤 바꿀 수 있어요)'
       : '봇 수 (바꾸면 칩과 기록이 초기화돼요)';
     box.append(heading);
-    const counts = [1, 2, 3, 4, 5].map((n) => (
+    const counts = [1, 2, 3, 4, 5, 6].map((n) => (
       button(String(n), `small ${settings.botCount === n ? 'selected' : ''}`, () => confirmNewGame(n), handActive)
     ));
     box.append(row(...counts));

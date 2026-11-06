@@ -2,12 +2,16 @@ import { Table } from './engine.js';
 import { BOT_ROSTER } from './bot.js';
 
 export const STORE_KEY = 'holdem.v1';
-export const STARTING_CHIPS = 2000;
+export const STARTING_CHIPS = 3000;
 export const SMALL_BLIND = 10;
 export const BIG_BLIND = 20;
 export const HUMAN_SEAT = 0;
 
-const DEFAULT_SETTINGS = { botCount: 4, speed: 'normal' };
+// Bump when a release changes the default table. Older saves then move to the
+// new table instead of restoring the old seats and chip stacks.
+const TABLE_VERSION = 2;
+
+const DEFAULT_SETTINGS = { botCount: 6, speed: 'normal' };
 const DEFAULT_STATS = { hands: 0, wins: 0, biggestPot: 0, rebuys: 0 };
 
 /** Holds the table between hands and persists chips, settings and stats. */
@@ -41,6 +45,7 @@ export class Session {
       const raw = this.storage.getItem(STORE_KEY);
       if (!raw) return false;
       const saved = JSON.parse(raw);
+      if (saved.tableVersion !== TABLE_VERSION) return this._upgrade(saved);
       const expected = saved.settings.botCount + 1;
       if (!Array.isArray(saved.chips) || saved.chips.length !== expected) return false;
       this.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
@@ -53,8 +58,20 @@ export class Session {
     }
   }
 
+  // Keeps the player's record and speed setting, and deals in at the new table.
+  _upgrade(saved) {
+    const { speed } = saved.settings || {};
+    this.settings = { ...DEFAULT_SETTINGS, ...(speed ? { speed } : {}) };
+    this.stats = { ...DEFAULT_STATS, ...saved.stats };
+    this.handNumber = saved.handNumber || 0;
+    this._buildTable(new Array(this.settings.botCount + 1).fill(STARTING_CHIPS), -1);
+    this.save();
+    return true;
+  }
+
   save() {
     this.storage.setItem(STORE_KEY, JSON.stringify({
+      tableVersion: TABLE_VERSION,
       settings: this.settings,
       stats: this.stats,
       handNumber: this.handNumber,
