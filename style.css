@@ -412,8 +412,6 @@ button {
   width: 56px;
   font-size: 24px;
   line-height: 1;
-  -webkit-touch-callout: none;
-  touch-action: none;
 }
 
 .btn.preset {

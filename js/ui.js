@@ -180,7 +180,6 @@ function resolveHuman(action) {
   const resolve = humanResolve;
   humanResolve = null;
   raiseOpen = false;
-  stopRepeat();
   resolve(action);
 }
 
@@ -206,32 +205,12 @@ function clampRaise(legal, value) {
   return Math.min(legal.maxRaiseTo, Math.max(legal.minRaiseTo, stepped));
 }
 
-// Holding − or + keeps stepping by a big blind, then five big blinds at a time.
-let repeatTimer = null;
+// − and + fine-tune the amount 10 chips per tap, apart from the pot-share presets.
+const RAISE_STEP = 10;
 
-function stopRepeat() {
-  clearTimeout(repeatTimer);
-  repeatTimer = null;
-}
-
-function stepButton(label, ariaLabel, step) {
-  const b = button(label, 'small step', () => {});
+function stepButton(label, ariaLabel, onTap) {
+  const b = button(label, 'small step', onTap);
   b.setAttribute('aria-label', ariaLabel);
-  let count = 0;
-  const tick = (delta) => {
-    if (b.disabled) return stopRepeat();
-    step(delta);
-    count++;
-    repeatTimer = setTimeout(() => tick(count > 12 ? 5 : 1), count === 1 ? 400 : 90);
-  };
-  b.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    stopRepeat();
-    count = 0;
-    tick(1);
-  });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(type, stopRepeat);
-  b.addEventListener('contextmenu', (e) => e.preventDefault());
   return b;
 }
 
@@ -252,8 +231,8 @@ function renderRaisePanel(table, legal) {
   const potAfterCall = table.pot + legal.toCall;
 
   const confirm = button('', 'raise', () => resolveHuman({ type: 'raise', amount: raiseValue }));
-  const minus = stepButton('−', '금액 줄이기', (n) => update(raiseValue - BIG_BLIND * n));
-  const plus = stepButton('+', '금액 늘리기', (n) => update(raiseValue + BIG_BLIND * n));
+  const minus = stepButton('−', '금액 줄이기', () => update(raiseValue - RAISE_STEP));
+  const plus = stepButton('+', '금액 늘리기', () => update(raiseValue + RAISE_STEP));
   const slider = document.createElement('input');
   slider.type = 'range';
   slider.min = legal.minRaiseTo;
@@ -298,7 +277,6 @@ function renderRaisePanel(table, legal) {
     row(...presets),
     row(
       button('취소', '', () => {
-        stopRepeat();
         raiseOpen = false;
         renderActions();
       }),
