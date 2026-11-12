@@ -438,6 +438,66 @@ test('a raise over a raise needs a stronger hand', () => {
   assert.equal(decide(facing(20, { ...view, raises: 2 }), STEADY, rng, 400).type, 'call');
 });
 
+test('a fair pair calls a small bet on the flop instead of folding', () => {
+  const rng = mulberry32(11);
+  const nines = [makeCard(9, 1), makeCard(9, 3)];
+  const board = [makeCard(13, 0), makeCard(7, 2), makeCard(2, 1)];
+  // 100 into a pot of 300, with three opponents still in.
+  const view = facing(100, { hole: nines, pot: 400, opponents: 3, botsLeft: 3, stage: 'flop', board, raises: 1 });
+  for (let i = 0; i < 50; i++) assert.equal(decide(view, STEADY, rng, 200).type, 'call');
+});
+
+test('bots open the betting with a third to three quarters of the pot', () => {
+  const rng = mulberry32(12);
+  const board = [makeCard(14, 0), makeCard(7, 2), makeCard(2, 1)];
+  const legal = { toCall: 0, canCheck: true, canRaise: true, minRaiseTo: 20, maxRaiseTo: 3000 };
+  const view = facing(0, { hole: [makeCard(14, 1), makeCard(13, 1)], pot: 300, opponents: 3, stage: 'flop', board, currentBet: 0, legal });
+  let bets = 0;
+  for (let i = 0; i < 200; i++) {
+    const action = decide(view, STEADY, rng, 200);
+    if (action.type !== 'raise') continue;
+    bets++;
+    assert.ok(action.amount >= 90 && action.amount <= 230, `bet ${action.amount}`);
+  }
+  assert.ok(bets > 150, `top pair bet ${bets} of 200 times`);
+});
+
+test('at a full table bots bet and call more than they fold, without many all-ins', () => {
+  const rng = mulberry32(13);
+  const bots = BOT_ROSTER.map((b) => ({ ...b, isHuman: false, chips: 3000 }));
+  const t = new Table({ players: [{ name: '나', isHuman: true, chips: 3000, style: BOT_ROSTER[0].style }, ...bots], rng });
+  let flops = 0;
+  let flopBets = 0;
+  let faced = 0;
+  let folds = 0;
+  let allIns = 0;
+  for (let hand = 0; hand < 150; hand++) {
+    for (const p of t.players) if (p.chips === 0) p.chips = 3000;
+    t.startHand();
+    let betOnFlop = false;
+    while (t.stage !== 'done') {
+      if (t.toAct < 0) {
+        t.advance();
+        if (t.stage === 'flop') flops++;
+        continue;
+      }
+      const view = t.viewFor(t.toAct);
+      const action = decide(view, t.players[t.toAct].style, rng, 60);
+      if (t.stage !== 'preflop' && !view.legal.canCheck) {
+        faced++;
+        if (action.type === 'fold') folds++;
+      }
+      if (t.stage === 'flop' && action.type === 'raise') betOnFlop = true;
+      if (action.type === 'raise' && action.amount === view.legal.maxRaiseTo) allIns++;
+      t.act(action);
+    }
+    if (betOnFlop) flopBets++;
+  }
+  assert.ok(flopBets / flops > 0.35, `flop bet in ${flopBets} of ${flops}`);
+  assert.ok(folds / faced < 0.55, `folded ${folds} of ${faced} bets`);
+  assert.ok(allIns / 150 < 0.15, `${allIns} all-in raises in 150 hands`);
+});
+
 test('random legal play never breaks the engine', () => {
   const rng = mulberry32(55);
   const t = new Table({ players: seats(300, 50, 700, 25, 1000, 120), rng });

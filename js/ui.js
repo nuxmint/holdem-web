@@ -180,6 +180,7 @@ function resolveHuman(action) {
   const resolve = humanResolve;
   humanResolve = null;
   raiseOpen = false;
+  stopRepeat();
   resolve(action);
 }
 
@@ -205,45 +206,99 @@ function clampRaise(legal, value) {
   return Math.min(legal.maxRaiseTo, Math.max(legal.minRaiseTo, stepped));
 }
 
+// Holding − or + keeps stepping by a big blind, then five big blinds at a time.
+let repeatTimer = null;
+
+function stopRepeat() {
+  clearTimeout(repeatTimer);
+  repeatTimer = null;
+}
+
+function stepButton(label, ariaLabel, step) {
+  const b = button(label, 'small step', () => {});
+  b.setAttribute('aria-label', ariaLabel);
+  let count = 0;
+  const tick = (delta) => {
+    if (b.disabled) return stopRepeat();
+    step(delta);
+    count++;
+    repeatTimer = setTimeout(() => tick(count > 12 ? 5 : 1), count === 1 ? 400 : 90);
+  };
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    stopRepeat();
+    count = 0;
+    tick(1);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(type, stopRepeat);
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+  return b;
+}
+
+function presetButton(text, value, onPick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'btn small preset';
+  b.dataset.value = value;
+  b.innerHTML = `<span class="lbl">${text}</span><span class="amt">${fmt(value)}</span>`;
+  b.addEventListener('click', () => onPick(value));
+  return b;
+}
+
 function renderRaisePanel(table, legal) {
   const box = $('actions');
   box.innerHTML = '';
   const label = table.currentBet === 0 ? '베팅' : '레이즈';
   const potAfterCall = table.pot + legal.toCall;
 
-  const line = document.createElement('div');
-  line.className = 'raise-line';
+  const confirm = button('', 'raise', () => resolveHuman({ type: 'raise', amount: raiseValue }));
+  const minus = stepButton('−', '금액 줄이기', (n) => update(raiseValue - BIG_BLIND * n));
+  const plus = stepButton('+', '금액 늘리기', (n) => update(raiseValue + BIG_BLIND * n));
   const slider = document.createElement('input');
   slider.type = 'range';
   slider.min = legal.minRaiseTo;
   slider.max = legal.maxRaiseTo;
   slider.step = 10;
-  const amount = document.createElement('span');
-  amount.className = 'amount';
-  line.append(slider, amount);
+  const sliderLine = document.createElement('div');
+  sliderLine.className = 'raise-line';
+  sliderLine.append(minus, slider, plus);
 
-  const confirm = button('', 'raise', () => resolveHuman({ type: 'raise', amount: raiseValue }));
-  const update = (value) => {
+  // Pot shares are "raise to" totals: call first, then add that share of the pot.
+  const shares = [['¼ 팟', 1 / 4], ['½ 팟', 1 / 2], ['팟', 1]];
+  // A share below the minimum raise shows its amount but stays off, and one
+  // that needs the whole stack is left to the all-in button.
+  const presets = shares.map(([text, share]) => {
+    const target = Math.round((table.currentBet + potAfterCall * share) / 10) * 10;
+    const b = presetButton(text, Math.min(target, legal.maxRaiseTo), update);
+    b.disabled = target < legal.minRaiseTo || target >= legal.maxRaiseTo;
+    return b;
+  });
+  const allIn = presetButton('올인', legal.maxRaiseTo, update);
+  allIn.classList.add('all-in');
+  presets.push(allIn);
+
+  function update(value) {
     // The slider's steps can miss an odd all-in amount, so the top snaps to it.
     const atTop = value >= legal.maxRaiseTo - 5;
     raiseValue = atTop ? legal.maxRaiseTo : clampRaise(legal, value);
     slider.value = raiseValue;
-    amount.textContent = fmt(raiseValue);
-    confirm.textContent = raiseValue === legal.maxRaiseTo ? `올인 ${fmt(raiseValue)}` : `${label} ${fmt(raiseValue)}`;
-  };
+    const total = raiseValue === legal.maxRaiseTo;
+    confirm.textContent = total ? `올인 ${fmt(raiseValue)}` : `${label} ${fmt(raiseValue)}`;
+    confirm.classList.toggle('all-in', total);
+    minus.disabled = raiseValue <= legal.minRaiseTo;
+    plus.disabled = raiseValue >= legal.maxRaiseTo;
+    for (const b of presets) {
+      b.classList.toggle('selected', !b.disabled && Number(b.dataset.value) === raiseValue);
+    }
+  }
   slider.addEventListener('input', () => update(Number(slider.value)));
 
-  const preset = (text, value) => button(text, 'small', () => update(value), value < legal.minRaiseTo);
   box.append(
-    line,
-    row(
-      preset('½ 팟', table.currentBet + potAfterCall / 2),
-      preset('¾ 팟', table.currentBet + (potAfterCall * 3) / 4),
-      preset('팟', table.currentBet + potAfterCall),
-      button('올인', 'small', () => update(legal.maxRaiseTo)),
-    ),
+    sliderLine,
+    row(...presets),
     row(
       button('취소', '', () => {
+        stopRepeat();
         raiseOpen = false;
         renderActions();
       }),

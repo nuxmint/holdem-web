@@ -407,10 +407,44 @@ button {
   color: var(--gold);
 }
 
-.raise-line .amount {
-  min-width: 66px;
-  text-align: right;
+.btn.step {
+  flex: none;
+  width: 56px;
+  font-size: 24px;
+  line-height: 1;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+.btn.preset {
+  min-height: 44px;
+  padding: 3px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.btn.preset .lbl {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.btn.preset .amt {
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
+}
+
+.btn.preset.all-in {
+  background: #8c2f2f;
+}
+
+.btn.preset.all-in.selected,
+.btn.raise.all-in {
+  background: #d33a3a;
+  color: var(--text);
 }
 
 input[type="range"] {
