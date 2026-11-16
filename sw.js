@@ -1,5 +1,5 @@
 // Bump VERSION on every release so installed copies pick up the new files.
-const VERSION = 'holdem-v5';
+const VERSION = 'holdem-v6';
 const FILES = [
   './',
   'index.html',

@@ -2,14 +2,14 @@ import { Table } from './engine.js';
 import { BOT_ROSTER } from './bot.js';
 
 export const STORE_KEY = 'holdem.v1';
-export const STARTING_CHIPS = 3000;
+export const STARTING_CHIPS = 10000;
 export const SMALL_BLIND = 10;
 export const BIG_BLIND = 20;
 export const HUMAN_SEAT = 0;
 
 // Bump when a release changes the default table. Older saves then move to the
 // new table instead of restoring the old seats and chip stacks.
-const TABLE_VERSION = 2;
+const TABLE_VERSION = 3;
 
 const DEFAULT_SETTINGS = { botCount: 6, speed: 'normal' };
 const DEFAULT_STATS = { hands: 0, wins: 0, biggestPot: 0, rebuys: 0 };

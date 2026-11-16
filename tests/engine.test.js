@@ -558,11 +558,11 @@ test('session survives corrupt saved data', () => {
   assert.equal(s.human.chips, STARTING_CHIPS);
 });
 
-test('a new game seats seven players with 3,000 chips each', () => {
+test('a new game seats seven players with 10,000 chips each', () => {
   const s = new Session({ storage: memoryStorage() });
-  assert.equal(STARTING_CHIPS, 3000);
+  assert.equal(STARTING_CHIPS, 10000);
   assert.equal(s.table.players.length, 7);
-  assert.ok(s.table.players.every((p) => p.chips === 3000));
+  assert.ok(s.table.players.every((p) => p.chips === 10000));
   const names = s.table.players.map((p) => p.name);
   assert.equal(new Set(names).size, 7);
   assert.ok(s.table.players.slice(1).every((p) => p.style));
@@ -579,7 +579,7 @@ test('an older save moves to the new table and keeps its record', () => {
   }));
   const s = new Session({ storage });
   assert.equal(s.table.players.length, 7);
-  assert.ok(s.table.players.every((p) => p.chips === 3000));
+  assert.ok(s.table.players.every((p) => p.chips === 10000));
   assert.equal(s.settings.botCount, 6);
   assert.equal(s.settings.speed, 'fast');
   assert.deepEqual(s.stats, { hands: 120, wins: 40, biggestPot: 5100, rebuys: 2 });
